@@ -559,7 +559,7 @@ max-statements=50
 # Minimum number of public methods for a class (see R0903).
 min-public-methods=2
 generated-members = wx.*
-extension-pkg-whitelist = wx
+extension-pkg-whitelist = wx, math
 
 [EXCEPTIONS]
 
