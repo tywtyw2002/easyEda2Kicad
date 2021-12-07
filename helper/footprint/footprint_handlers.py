@@ -3,7 +3,7 @@ import math
 import logging
 
 from KicadModTree import *
-from model3d import *
+from .model3d import get_3Dmodel
 
 
 logger = logging.getLogger("KICONV")
@@ -247,6 +247,7 @@ def h_SVGNODE(data, kicad_mod, footprint_info):
         translationZ=json.loads(data[0])["attrs"]["z"],
         rotation=json.loads(data[0])["attrs"]["c_rotation"]
     )
+    return model_data
 
 
 def h_VIA(data, kicad_mod, footprint_info):

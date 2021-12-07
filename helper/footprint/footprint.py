@@ -3,7 +3,7 @@
 import logging
 
 from KicadModTree import Footprint, Text, Translation
-from footprint_handlers import FOOTPRINT_HANDLER
+from .footprint_handlers import FOOTPRINT_HANDLER
 
 
 logger = logging.getLogger("KICONV")
@@ -13,8 +13,6 @@ class FootprintInfo():
     def __init__(
         self,
         footprint_name,
-        output_dir,
-        footprint_lib,
         assembly_process
     ):
         # # I will be using these to calculate the bounding box
@@ -26,16 +24,12 @@ class FootprintInfo():
         self.min_Y = 10000
         self.assembly_process = assembly_process
         self.footprint_name = footprint_name
-        self.output_dir = output_dir
-        self.footprint_lib = footprint_lib
 
 
 def create_footprint(
     footprint_name,
     footprint_shape,
-    footprint_lib,
-    assembly_process,
-    output_dir
+    assembly_process
 ):
     logger.info("Footprint: creating footprint ...")
 
@@ -47,6 +41,8 @@ def create_footprint(
 
     # init kicad footprint
     kicad_mod = Footprint(footprint_name)
+    # assign tmp node to store footprint 3d info.
+    kicad_mod.c_3d_model = None     # type: ignore
     # TODO Set real description
     # kicad_mod.setDescription(f"{footprint_name} footprint")
     # kicad_mod.setTags(f"{footprint_name} footprint")
@@ -54,8 +50,6 @@ def create_footprint(
     footprint_info = FootprintInfo(
         assembly_process=assembly_process,
         footprint_name=footprint_name,
-        output_dir=output_dir,
-        footprint_lib=footprint_lib
     )
 
     # for each line in data : use the appropriate handler
@@ -63,13 +57,17 @@ def create_footprint(
         # split and remove empty string in list
         args = [i for i in line.split("~") if i]
         model = args[0]
-        logger.debug(f"Footprint: args->{args}")
+        logger.debug("Footprint: args->%s", args)
         if model not in FOOTPRINT_HANDLER:
-            logger.warning(f"Footprint: model not in handler->{model}")
+            logger.warning("Footprint: model not in handler->%s", model)
             continue
 
-        build_func = FOOTPRINT_HANDLER.get(model)
-        build_func(args[1:], kicad_mod, footprint_info)     # type: ignore
+        if model == "SVGNODE":
+            func = FOOTPRINT_HANDLER.get("SVGNODE")
+            kicad_mod.c_3d_model = func(args[1:], kicad_mod, footprint_info)    # type: ignore
+        else:
+            build_func = FOOTPRINT_HANDLER.get(model)
+            build_func(args[1:], kicad_mod, footprint_info)     # type: ignore
 
     # set general values
     kicad_mod.append(
