@@ -43,13 +43,14 @@ def create_footprint(
     kicad_mod = Footprint(footprint_name)
     # assign tmp node to store footprint 3d info.
     kicad_mod.c_3d_model = None     # type: ignore
+    kicad_mod.c_3d_model_rotation = None     # type: ignore
     # TODO Set real description
     # kicad_mod.setDescription(f"{footprint_name} footprint")
     # kicad_mod.setTags(f"{footprint_name} footprint")
 
     footprint_info = FootprintInfo(
-        assembly_process=assembly_process,
         footprint_name=footprint_name,
+        assembly_process=assembly_process
     )
 
     # for each line in data : use the appropriate handler
@@ -64,7 +65,7 @@ def create_footprint(
 
         if model == "SVGNODE":
             func = FOOTPRINT_HANDLER.get("SVGNODE")
-            kicad_mod.c_3d_model = func(args[1:], kicad_mod, footprint_info)    # type: ignore
+            kicad_mod.c_3d_model, kicad_mod.c_3d_model_rotation = func(args[1:], kicad_mod, footprint_info)    # type: ignore
         else:
             build_func = FOOTPRINT_HANDLER.get(model)
             build_func(args[1:], kicad_mod, footprint_info)     # type: ignore

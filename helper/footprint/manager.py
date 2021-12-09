@@ -1,9 +1,14 @@
 import logging
 
 from pathlib import Path
+from KicadModTree import KicadFileHandler
 
 
 logger = logging.getLogger("KICONV")
+
+
+class FootprintExist(Exception):
+    pass
 
 
 class FootprintManager:
@@ -24,20 +29,28 @@ class FootprintManager:
             logger.warn("Footprint Manager: 3D Model Path not exists, create it.")
             self.lib_3d_path.mkdir()
 
-    def add_3d_model(self, name, data, update=False):
-        footprint_path = self.lib_path.joinpath(f"{name}.kicad_mod")
-        pass
-
     def add_footprint(self, name, data, update=False):
-        model_path = self.lib_path.joinpath(f"{name}.step")
-        pass
+        footprint_path = self.lib_path.joinpath(f"{name}.kicad_mod")
+        if self.check_footprint(name) and not update:
+            raise FootprintExist()
+
+        file_handler = KicadFileHandler(data)
+        file_handler.writeFile(str(footprint_path))
+        # file_handler.writeFile(f'{output_dir}/{footprint_lib}/{footprint_name}.kicad_mod')
+        logger.info("Footprint Manager: Footprint add to %s", str(footprint_path))
+
+    def add_3d_model(self, name, data, update=False):
+        model_path = self.lib_3d_path.joinpath(f"{name}.wrl")
+        model_path.write_text(data)
+        logger.info("Footprint Manager: 3D Model add to %s", str(model_path))
 
     def check_footprint(self, name):
         footprint_path = self.lib_path.joinpath(f"{name}.kicad_mod")
         return footprint_path.exists()
 
     def check_3d_model(self, name):
-        model_path = self.lib_path.joinpath(f"{name}.step")
+        model_path = self.lib_3d_path.joinpath(f"{name}.wrl")
         return model_path.exists()
 
-
+    def get_3d_model_ref_path(self, name):
+        return f"${{KIPRJMOD}}/{self.lib_name}.3dshapes/{name}"

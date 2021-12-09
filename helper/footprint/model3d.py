@@ -123,7 +123,9 @@ Group {{
     wrl_ctx += wrl_color_change
     wrl_ctx += wrl_footer
 
+    rotate = [-float(axis_rotation) for axis_rotation in rotation.split(',')]
+
     # kicad_mod.append(Model(filename = f"{os.path.dirname(__file__)}\{filename}", rotate = [-float(axis_rotation) for axis_rotation in rotation.split(',')]))
     logger.info("3DModal: 3DModel Generated. Size: %s", len(wrl_ctx))
 
-    return wrl_ctx
+    return wrl_ctx, rotate

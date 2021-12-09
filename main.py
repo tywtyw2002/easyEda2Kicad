@@ -16,6 +16,8 @@ from logging import Handler, Formatter
 from cairosvg.parser import Tree as svgTree
 from cairosvg.surface import SVGSurface, PNGSurface
 
+from gui_lib_manager import LibManagerControl
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -344,6 +346,7 @@ class Main(wx.Frame):
 
         self.btn_save_to_kicad = wx.Button(self.panel_1, wx.ID_ANY, "Save")
         self.btn_save_to_kicad.SetMinSize((84, 22))
+        self.btn_save_to_kicad.Bind(wx.EVT_BUTTON, self.on_btn_save_kicad_pressed)
         sizer_2.Add(self.btn_save_to_kicad, 0, 0, 0)
 
         # part root
@@ -510,6 +513,7 @@ class Main(wx.Frame):
 
     def init_values(self):
         self.lcpart = None
+        self.lib_manager = None
 
         self.log_init()
         self.status.WriteText("Init Done.\nVersion: Alpha.\n")
@@ -627,6 +631,17 @@ class Main(wx.Frame):
         self.btn_ref.Enable()
 
         logger.info(f"Done.")
+
+    def on_btn_save_kicad_pressed(self, e):
+        if self.lcpart is None:
+            warn_dialog("No LC Part to save.")
+            return
+
+        if self.lib_manager is None:
+            self.lib_manager = LibManagerControl(self)
+
+        self.lib_manager.load_part(self.lcpart.lcid, self.lcpart.part_detail)    # type: ignore
+        # self.lib_manager.load_part("C9872")
 
 
 class MyApp(wx.App):
