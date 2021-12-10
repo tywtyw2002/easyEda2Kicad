@@ -5,6 +5,9 @@ import logging
 from KicadModTree import *
 from .model3d import get_3Dmodel
 
+from svg.path import parse_path
+from svg.path import Arc as svg_ARC
+
 
 logger = logging.getLogger("KICONV")
 
@@ -20,24 +23,42 @@ layer_correspondance = {
     "8": "B.Mask",
     "12": "F.Fab",
     "100": "F.SilkS",
-    "101": "F.SilkS",
+    "101": "F.Courtyard",
     }
 
 
-def mil2mm(data):
-    return float(data) / 3.937
+# def mil2mm(data):
+#     return float(data) / 3.937
+
+def mil2mm(x, y, footprint_info):
+    nx = (float(x) - footprint_info.c_x) * 10 * 0.0254
+    ny = (float(y) - footprint_info.c_y) * 10 * 0.0254
+
+    return round(nx, 2), round(ny, 2)
+
+
+def smil2mm(x, y):
+    return round(float(x) * 10 * 0.0254, 2), round(float(y) * 10 * 0.0254, 2)
+
+
+def pmil2mm(x):
+    return round(float(x) * 10 * 0.0254, 2)
 
 
 def h_TRACK(data, kicad_mod, footprint_info):
-    data[0] = mil2mm(data[0])
+    width = pmil2mm(data[0])
 
-    width = data[0]
-    points = [mil2mm(p) for p in data[2].split(" ")]
+    # points = [mil2mm(p) for p in data[2].split(" ")]
+    points = data[2].split(" ")
+    nodes = []
 
-    for i in range(int(len(points)/2) - 1):
+    for x, y in zip(*[iter(points)] * 2):
+        nodes.append(mil2mm(x, y, footprint_info))
 
-        start = [points[2*i], points[2*i + 1]]
-        end = [points[2*i + 2], points[2*i + 3]]
+    for i in range(len(nodes) - 1):
+
+        start = nodes[i]
+        end = nodes[i + 1]
 
         try:
             layer = layer_correspondance[data[1]]
@@ -46,12 +67,6 @@ def h_TRACK(data, kicad_mod, footprint_info):
                 "Footprint(h_TRACK): layer correspondance not found."
             )
             layer = "F.SilkS"
-
-        # update footprint borders
-        footprint_info.max_X = max(footprint_info.max_X, start[0], end[0])
-        footprint_info.min_X = min(footprint_info.min_X, start[0], end[0])
-        footprint_info.max_Y = max(footprint_info.max_Y, start[1], end[1])
-        footprint_info.min_Y = min(footprint_info.min_Y, start[1], end[1])
 
         # append line to kicad_mod
         kicad_mod.append(
@@ -74,80 +89,49 @@ def h_PAD(data, kicad_mod, footprint_info):
 
     rotation = 0
     primitives = ""
+    pad_shape = "SHAPE_OVAL"
+    pad_drill = None
+    pad_type = Pad.TYPE_SMT
+    pad_layer = Pad.LAYERS_SMT
+    pad_number = data[6]
 
-    if footprint_info.assembly_process == "SMT":
-        data[1] = mil2mm(data[1])
-        data[2] = mil2mm(data[2])
-        data[3] = mil2mm(data[3])
-        data[4] = mil2mm(data[4])
+    hole_size = float(data[7])
 
-        pad_type = Pad.TYPE_SMT
-        pad_layer = Pad.LAYERS_SMT
-        pad_number = data[6]
-        if data[0] in shape_correspondance:
-            shape = shape_correspondance[data[0]]
-        else:
-            logger.error("Footprint(PAD): no correspondance found, using defualt SHAPE_OVAL.")
-            shape = "SHAPE_OVAL"
-
-        at = [data[1], data[2]]
-        size = [data[3], data[4]]
-
-        # update footprint borders
-        footprint_info.max_X = max(footprint_info.max_X, at[0], at[0])
-        footprint_info.min_X = min(footprint_info.min_X, at[0], at[0])
-        footprint_info.max_Y = max(footprint_info.max_Y, at[1], at[1])
-        footprint_info.min_Y = min(footprint_info.min_Y, at[1], at[1])
-
-        if shape == "SHAPE_OVAL":
-            rotation = float(data[9])
-        elif shape == "SHAPE_CUSTOM":
-            points = []
-            for i, coord in enumerate(data[8].split(" ")):
-                points.append(mil2mm(coord) - at[i % 2])
-            primitives = [Polygon(nodes=zip(points[::2], points[1::2]))]
-        elif shape == "SHAPE_CIRCLE":
-            pass
-        elif shape == "SHAPE_RECT":
-            rotation = float(data[9])
-
-        drill = 1
-
-    elif footprint_info.assembly_process == "THT":
-        data[1] = mil2mm(data[1])
-        data[2] = mil2mm(data[2])
-        data[3] = mil2mm(data[3])
-        data[4] = mil2mm(data[4])
-        data[7] = mil2mm(data[7])
-
+    if hole_size > 0:
         pad_type = Pad.TYPE_THT
         pad_layer = Pad.LAYERS_THT
-        pad_number = data[6]
-        shape = shape_correspondance[data[0]]
-        s_at = [data[1], data[2]]
-        size = [data[3], data[4]]
-        rotation = 0    # TODO
-        drill = data[7] * 2
+        pad_drill = pmil2mm(hole_size * 2)
 
+    pad_position = mil2mm(data[1], data[2], footprint_info)
+    pad_size = smil2mm(data[3], data[4])
+
+    if data[0] in shape_correspondance:
+        pad_shape = shape_correspondance[data[0]]
     else:
-        logger.warning(f"Footprint: unknown assembly_process <{footprint_info.assembly_process}>")
-        return()
+        logger.error("Footprint(PAD): no correspondance found, using defualt SHAPE_OVAL.")
 
-    # update footprint borders
-    footprint_info.max_X = max(footprint_info.max_X, data[1])
-    footprint_info.min_X = min(footprint_info.min_X, data[1])
-    footprint_info.max_Y = max(footprint_info.max_Y, data[2])
-    footprint_info.min_Y = min(footprint_info.min_Y, data[2])
+    if pad_shape == "SHAPE_OVAL":
+        rotation = float(data[9])
+    elif pad_shape == "SHAPE_CUSTOM":
+        nodes = []
+        ori_points = data[8].split(" ")
+        for x, y in zip(*[iter(ori_points)] * 2):
+            nodes.append(mil2mm(x, y, footprint_info))
+        primitives = [Polygon(nodes=nodes)]
+    elif pad_shape == "SHAPE_CIRCLE":
+        pass
+    elif pad_shape == "SHAPE_RECT":
+        rotation = float(data[9])
 
     kicad_mod.append(
         Pad(
             number=pad_number,
             type=pad_type,
-            shape=getattr(Pad, shape),
-            at=s_at,
-            size=size,
+            shape=getattr(Pad, pad_shape),
+            at=pad_position,
+            size=pad_size,
             rotation=rotation,
-            drill=drill,
+            drill=pad_drill,
             layers=pad_layer,
             primitives=primitives
         )
@@ -159,31 +143,19 @@ def h_ARC(data, kicad_mod, footprint_info):
     try:
         # parse the data
         if data[2][0] == "M":
-            startX, startY, midX, midY, _, _, _, endX, endY = [val for val in data[2].replace("M", "").replace("A", "").replace(",", " ").split(" ") if val]
+            # startX, startY, midX, midY, _, _, _, endX, endY = [val for val in data[2].replace("M", "").replace("A", "").replace(",", " ").split(" ") if val]
+            path = parse_path(data[2])
         elif data[3][0] == "M":
-            startX, startY, midX, midY, _, _, _, endX, endY = [val for val in data[3].replace("M", "").replace("A", "").replace(",", " ").split(" ") if val]
+            path = parse_path(data[3])
+            # startX, startY, midX, midY, _, _, _, endX, endY = [val for val in data[3].replace("M", "").replace("A", "").replace(",", " ").split(" ") if val]
         else:
             logger.warning("Footprint: failed to parse footprint ARC data")
-        width = data[0]
 
-        width = mil2mm(width)
-        startX = mil2mm(startX)
-        startY = mil2mm(startY)
-        midX = mil2mm(midX)
-        midY = mil2mm(midY)
-        endX = mil2mm(endX)
-        endY = mil2mm(endY)
-
-        start = [startX, startY]
-        end = [endX, endY]
-        midpoint = [end[0] + midX, end[1] + midY]
-
-        sq1 = math.pow(midpoint[0],2) + math.pow(midpoint[1],2) - math.pow(start[0], 2) - math.pow(start[1], 2)
-        sq2 = math.pow(end[0], 2) + math.pow(end[1], 2) - math.pow(start[0], 2) - math.pow(start[1], 2)
-
-        centerX = ((start[1]-end[1])/(start[1]-midpoint[1])*sq1 - sq2) / (2*(start[0]-end[0])-2*(start[0]-midpoint[0])*(start[1]-end[1])/(start[1]-midpoint[1]))
-        centerY = -(2*(start[0]-midpoint[0])*centerX+sq1)/(2*(start[1]-midpoint[1]))
-        center = [centerX, centerY]
+        width = pmil2mm(data[0])
+        sarc = path[1]
+        if not isinstance(sarc, svg_ARC):
+            logger.warning("Footprint: Path ARC DATA ERR. %s", path)
+            return
 
         try:
             layer = layer_correspondance[data[1]]
@@ -191,11 +163,15 @@ def h_ARC(data, kicad_mod, footprint_info):
             logger.warning('Footprint(Arc): layer correspondance not found')
             layer = "F.SilkS"
 
-        kicad_mod.append(Arc(center=center,
-                            start=start,
-                            end=end,
-                            width=width,
-                            layer=layer))
+        kicad_mod.append(
+            Arc(
+                center=mil2mm(sarc.center.real, sarc.center.imag, footprint_info),
+                end=mil2mm(sarc.start.real, sarc.start.imag, footprint_info),
+                start=mil2mm(sarc.end.real, sarc.end.imag, footprint_info),
+                width=width,
+                layer=layer
+            )
+        )
     except:
         logger.exception("Footprint(Arc): failed to add ARC")
 
@@ -209,14 +185,9 @@ def h_CIRCLE(data, kicad_mod, footprint_info):
     if data[4] == "100":
         return
 
-    data[0] = mil2mm(data[0])
-    data[1] = mil2mm(data[1])
-    data[2] = mil2mm(data[2])
-    data[3] = mil2mm(data[3])
-
-    center = [data[0], data[1]]
-    radius = data[2]
-    width = data[3]
+    center = mil2mm(data[0], data[1], footprint_info)
+    radius = pmil2mm(data[2])
+    width = pmil2mm(data[3])
 
     try:
         layer = layer_correspondance[data[4]]

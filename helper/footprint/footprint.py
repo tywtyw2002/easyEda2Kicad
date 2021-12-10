@@ -13,7 +13,9 @@ class FootprintInfo():
     def __init__(
         self,
         footprint_name,
-        assembly_process
+        assembly_process,
+        c_x=0,
+        c_y=0
     ):
         # # I will be using these to calculate the bounding box
         # because the node.calculateBoundingBox() methode does not
@@ -22,14 +24,25 @@ class FootprintInfo():
         self.max_Y = -10000
         self.min_X = 10000
         self.min_Y = 10000
-        self.assembly_process = assembly_process
+        self.c_x = c_x
+        self.c_y = c_y
+        self._assembly_process = assembly_process
         self.footprint_name = footprint_name
+
+    def assembly_process(self):
+        if self._assembly_process is True:
+            return "smd"
+        return None
 
 
 def create_footprint(
     footprint_name,
     footprint_shape,
-    assembly_process
+    assembly_process=None,
+    c_x=0,
+    c_y=0,
+    size_x=0,
+    size_y=0
 ):
     logger.info("Footprint: creating footprint ...")
 
@@ -50,7 +63,9 @@ def create_footprint(
 
     footprint_info = FootprintInfo(
         footprint_name=footprint_name,
-        assembly_process=assembly_process
+        assembly_process=assembly_process,
+        c_x=c_x,
+        c_y=c_y
     )
 
     # for each line in data : use the appropriate handler
@@ -76,8 +91,8 @@ def create_footprint(
             type='reference',
             text='REF**',
             at=[
-                (footprint_info.min_X + footprint_info.max_X)/2,
-                footprint_info.min_Y - 2
+                0,
+                size_y / 2 * 0.254 + 2
             ],
             layer='F.SilkS'
         )
@@ -87,8 +102,8 @@ def create_footprint(
             type='user',
             text='REF**',
             at=[
-                (footprint_info.min_X + footprint_info.max_X)/2,
-                footprint_info.max_Y + 4
+                0,
+                size_y / 2 * 0.254 + 4
             ],
             layer='F.Fab'
         )
@@ -98,15 +113,15 @@ def create_footprint(
             type='value',
             text=footprint_name,
             at=[
-                (footprint_info.min_X + footprint_info.max_X)/2,
-                footprint_info.max_Y + 2
+                0,
+                size_y / 2 * 0.254 + 2
             ],
             layer='F.Fab'
             )
         )
 
     # translate the footprint to be centered around 0,0
-    kicad_mod.insert(Translation(-(footprint_info.min_X + footprint_info.max_X)/2, -(footprint_info.min_Y + footprint_info.max_Y)/2))
+    # kicad_mod.insert(Translation(-(footprint_info.min_X + footprint_info.max_X)/2, -(footprint_info.min_Y + footprint_info.max_Y)/2))
     logger.info("Footprint: Footprint Generated.")
 
     # if not os.path.exists(f"{output_dir}/{footprint_lib}"):

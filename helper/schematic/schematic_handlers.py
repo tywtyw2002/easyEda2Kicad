@@ -202,6 +202,46 @@ def h_PG(data, kicad_schematic):
         logger.exception("Schematic: failed to add a polygone")
 
 
+def h_PT(data, kicad_schematic):
+    """
+    Path element handler
+    """
+    from svg.path import parse_path, Move, Line, Close
+    try:
+        path = parse_path(data[0])
+        count = 0
+        dmg = 0
+        pen = 0
+        points = []
+        for element in path:
+            if isinstance(element, Move):
+                continue
+
+            process_points = []
+            if isinstance(element, Line):
+                process_points.append(element.start)
+            elif isinstance(element, Close):
+                process_points.append(element.start)
+                process_points.append(element.end)
+            else:
+                logger.warning("Schematic: unknown type of element. %s", element)
+
+            for point in process_points:
+                count += 1
+                px = point.real
+                py = point.imag
+
+                x = int((float(px) - kicad_schematic.c_x) * kicad_schematic.scale)
+                y = -int((float(py) - kicad_schematic.c_y) * kicad_schematic.scale)
+                points.append(str(x))
+                points.append(str(y))
+
+        cmd = f"P {count} {kicad_schematic.part} {dmg} {pen} {' '.join(points)}"
+        kicad_schematic.drawing.append(cmd)
+    except:
+        logger.exception("Schematic: failed to add a Path element")
+
+
 SCHEMATIC_HANDLER = {
     "R": h_R,
     "E": h_E,
@@ -209,4 +249,5 @@ SCHEMATIC_HANDLER = {
     "T": h_T,
     "PL": h_PL,
     "PG": h_PG,
+    "PT": h_PT,
 }

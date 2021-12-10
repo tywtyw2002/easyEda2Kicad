@@ -7,9 +7,24 @@ import logging
 import requests
 
 from KicadModTree import Model
+from logging import Handler, Formatter
 
 
 logger = logging.getLogger("KICONV")
+
+
+class CMHandler(Handler):
+    def __init__(self, func):
+        Handler.__init__(self)
+        self.status_write_func = func
+        self.formatter = Formatter(
+            fmt='%(asctime)s [%(levelname)s] %(message)s\n',
+            datefmt='%H:%M:%S'
+        )
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.status_write_func(msg)
 
 
 class LCComponent:
@@ -86,11 +101,18 @@ class LCComponent:
             return None
 
         assembly_process = self.raw_data.get('SMT', False)
+        box = self.footprint['dataStr']['BBox']
+        canvas = self.footprint['dataStr']['canvas']
+        canvas = canvas.split("~")
 
         data = create_footprint(
             footprint_name,
             self.footprint['dataStr']['shape'],
-            assembly_process
+            assembly_process,
+            c_x=float(canvas[16]),
+            c_y=float(canvas[17]),
+            size_x=float(box['width']),
+            size_y=float(box['height'])
         )
 
         data.setDescription(f"{footprint_name} footprint")
@@ -120,6 +142,11 @@ class LCComponent:
         manufacturer = self.symbol['head']['c_para']['BOM_Manufacturer']
         datasheet_link = self.get_datasheet()
         category = " - "
+        desc = self.raw_data['description']     # type: ignore
+        if desc == "" and self.lc_data:
+            lc_desc = self.lc_data.get('productIntroEn', "")
+            if lc_desc:
+                desc = lc_desc
 
         # get datasheet
         if self.lc_data is not None:
@@ -137,7 +164,7 @@ class LCComponent:
             x_size=box['width'],
             y_size=box['height'],
             scale=scale,
-            desc=self.raw_data['description'],  # type: ignore
+            desc=desc,
             category=category,
             manufacturer=manufacturer
         )
@@ -370,6 +397,7 @@ class LibManagerControl:
         self.schematic_manager = None
         self.frame = None
         self.component = None
+        self.cx_handler = None
 
     def disable_all_children(self, parent):
         for children in parent.GetChildren():
@@ -515,6 +543,9 @@ class LibManagerControl:
 
         self.gen_symbol(symbol_name, footprint_name)
         self.gen_footprint(footprint_name, model3d_name)
+        wx.MessageBox(
+            "Component Generated.", 'Info', wx.OK | wx.ICON_INFORMATION
+        )
 
     def do_load_component(self, e):
         ret = self.component.load_componnt()      # type: ignore
@@ -557,6 +588,12 @@ class LibManagerControl:
             self.footprint_manager = None
             self.schematic_manager = None
 
+    def log_handler(self, msg):
+        if not self.frame:
+            return
+
+        self.frame.txt_ctl_log.AppendText(msg)
+
     def load_part(self, lcid, lc_data=None):
         self.component = LCComponent(lcid, lc_data)
         self.frame = LibManagerFrame(self.wx_parent, wx.ID_ANY, "")
@@ -593,6 +630,12 @@ class LibManagerControl:
 
         self.frame.SetTitle(f"Symbol & Footprint Export - {lcid}")
 
+        # init log.
+        if self.cx_handler is None:
+            self.cx_handler = CMHandler(self.log_handler)
+            self.cx_handler.setLevel(logging.INFO)
+            logger.addHandler(self.cx_handler)
+
         logger.info("Symbol & Footprint Export")
         logger.info("Currnet Component: %s", lcid)
 
@@ -600,3 +643,4 @@ class LibManagerControl:
 
         t = self.frame.ShowModal()
         self.frame.Destroy()
+        self.frame = None
