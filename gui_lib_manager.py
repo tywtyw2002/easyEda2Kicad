@@ -152,6 +152,9 @@ class LCComponent:
         if self.lc_data is not None:
             category = f"{self.lc_data['parentCatalogName']} - {self.lc_data['catalogName']}"
 
+        canvas = self.symbol['canvas']
+        canvas = canvas.split("~")
+
         return create_schematic(
             lcid=self.lcid,
             schematic_title=symbol_name,
@@ -159,8 +162,10 @@ class LCComponent:
             symmbolic_prefix=symmbolic_prefix,
             footprint_name=footprint_name,
             datasheet_link=datasheet_link,
-            x_offset=box['x'],
-            y_offset=box['y'],
+            # x_offset=box['x'],
+            # y_offset=box['y'],
+            x_offset=canvas[13],
+            y_offset=canvas[14],
             x_size=box['width'],
             y_size=box['height'],
             scale=scale,

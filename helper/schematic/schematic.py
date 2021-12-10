@@ -48,8 +48,10 @@ def create_schematic(
     kicad_schematic = KICADSchematic(lcid=lcid)
     kicad_schematic.part += 1
     kicad_schematic.scale = scale
-    kicad_schematic.c_x = x_offset + x_size / 2
-    kicad_schematic.c_y = y_offset + y_size / 2
+    # kicad_schematic.c_x = x_offset + x_size / 2
+    # kicad_schematic.c_y = y_offset + y_size / 2
+    kicad_schematic.c_x = float(x_offset)
+    kicad_schematic.c_y = float(y_offset)
 
     logger.info(f"Schematic: creating schematic...")
 

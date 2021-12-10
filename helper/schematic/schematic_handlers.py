@@ -1,5 +1,5 @@
 import logging
-
+from svg.path import parse_path, Move, Line, Close
 
 logger = logging.getLogger("KICONV")
 
@@ -27,7 +27,7 @@ def h_R(data, kicad_schematic):
     pen = "0"
     fill = ""
 
-    cmd = f"S {X1} {Y1} {X2} {Y2} {part} {dmg} {pen} {fill}"
+    cmd = f"S {X1} {-Y1} {X2} {-Y2} {part} {dmg} {pen} {fill}"
     kicad_schematic.drawing.append(cmd)
 
 
@@ -74,23 +74,32 @@ def h_P(data, kicad_schematic):
     pin_number = data[2]
     X = int((float(data[3]) - kicad_schematic.c_x) * kicad_schematic.scale)
     Y = -int((float(data[4]) - kicad_schematic.c_y) * kicad_schematic.scale)
-    length = 200
+
+    length_raw = data[8].split("^^")[-1]
+    svgs = parse_path(length_raw)
+
+    length = int(svgs[-1].length() * 10)
+    # length = 200
     if data[5] == '0':
         orientation = 'L'
-        X += int(length/2)
+        # X += int(length/2)
+        # X += length
         kicad_schematic.wire_r = 1
     elif data[5] == '180':
         orientation = 'R'
         kicad_schematic.wire_l = 1
-        X -= int(length/2)
+        # X -= int(length/2)
+        # X -= length
     elif data[5] == '90':
         orientation = 'D'
         kicad_schematic.wire_t = 1
-        Y += int(length/2)
+        # Y += int(length/2)
+        # Y += length
     elif data[5] == '270':
         orientation = 'U'
         kicad_schematic.wire_b = 1
-        Y -= int(length/2)
+        # Y -= int(length/2)
+        # Y -= length
     else:
         orientation = 'L'
         logger.warning(f"Schematic: pin {pin_name} number {pin_number} failed to find orientation. Using Default orientation 'Left' ")
@@ -206,7 +215,6 @@ def h_PT(data, kicad_schematic):
     """
     Path element handler
     """
-    from svg.path import parse_path, Move, Line, Close
     try:
         path = parse_path(data[0])
         count = 0
