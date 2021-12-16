@@ -4,6 +4,11 @@ from svg.path import parse_path, Move, Line, Close
 logger = logging.getLogger("KICONV")
 
 
+def mil2mm(x):
+    x = round(int(x) * 0.0254, 4)
+    return x
+
+
 def h_R(data, kicad_schematic):
     """
     S X1 Y1 X2 Y2 part dmg pen fill
@@ -27,8 +32,14 @@ def h_R(data, kicad_schematic):
     pen = "0"
     fill = ""
 
-    cmd = f"S {X1} {-Y1} {X2} {-Y2} {part} {dmg} {pen} {fill}"
-    kicad_schematic.drawing.append(cmd)
+    #cmd = f"S {X1} {-Y1} {X2} {-Y2} {part} {dmg} {pen} {fill}"
+    cmd = [
+        f'      (rectangle (start {mil2mm(X1)} {mil2mm(-Y1)}) (end {mil2mm(X2)} {mil2mm(-Y2)})',
+        '        (stroke (width 0) (type default) (color 0 0 0 0))',
+        '        (fill (type none))',
+        '      )'
+    ]
+    kicad_schematic.drawing.append("\n".join(cmd))
 
 
 def h_E(data, kicad_schematic):
@@ -44,10 +55,18 @@ def h_E(data, kicad_schematic):
         dmg = "0"
         pen = "0"
         fill = "N"
-        cmd = f"C {X1} {Y1} {radius} {kicad_schematic.part} {dmg} {pen} {fill}"
-        kicad_schematic.drawing.append(cmd)
     except:
         logger.exception("Schematic: schematic Circle")
+        return
+
+    # cmd = f"C {X1} {Y1} {radius} {kicad_schematic.part} {dmg} {pen} {fill}"
+    cmd = [
+        f'      (circle (center {mil2mm(X1)} {mil2mm(Y1)}) (radius {mil2mm(radius)})',
+        '        (stroke (width 0) (type default) (color 0 0 0 0))',
+        '        (fill (type none))',
+        '      )'
+    ]
+    kicad_schematic.drawing.append("\n".join(cmd))
 
 
 def h_P(data, kicad_schematic):
@@ -81,27 +100,28 @@ def h_P(data, kicad_schematic):
     length = int(svgs[-1].length() * 10)
     # length = 200
     if data[5] == '0':
-        orientation = 'L'
+        orientation = '180'   # L
         # X += int(length/2)
         # X += length
         kicad_schematic.wire_r = 1
     elif data[5] == '180':
-        orientation = 'R'
+        orientation = '0'   # R
         kicad_schematic.wire_l = 1
         # X -= int(length/2)
         # X -= length
     elif data[5] == '90':
-        orientation = 'D'
+        orientation = '270'   # D
         kicad_schematic.wire_t = 1
         # Y += int(length/2)
         # Y += length
     elif data[5] == '270':
-        orientation = 'U'
+        orientation = '90'  # U
         kicad_schematic.wire_b = 1
         # Y -= int(length/2)
         # Y -= length
     else:
         orientation = 'L'
+        orientation = '180'
         logger.warning(f"Schematic: pin {pin_name} number {pin_number} failed to find orientation. Using Default orientation 'Left' ")
 
     sizenum = "40"
@@ -110,20 +130,26 @@ def h_P(data, kicad_schematic):
     shape = ""
 
     if data[1] == '0':
-        electrical_type = "U"   # Unspecified
+        electrical_type = "unspecified"   # Unspecified
     elif data[1] == '1':
-        electrical_type = "I"   # Input
+        electrical_type = "input"   # Input
     elif data[1] == '2':
-        electrical_type = "O"   # Output
+        electrical_type = "output"   # Output
     elif data[1] == '3':
-        electrical_type = "B"   # Bidirectionnal
+        electrical_type = "bidirectional"   # Bidirectionnal
     elif data[1] == '4':
-        electrical_type = "W"   # Power input
+        electrical_type = "power_in"   # Power input
     else:
-        electrical_type = "U"    # Unspecified
+        electrical_type = "unspecified"    # Unspecified
 
-    cmd = f"X {pin_name} {pin_number} {X} {Y} {length} {orientation} {sizenum} {sizename} {kicad_schematic.part} {dmg} {electrical_type} {shape}"
-    kicad_schematic.drawing.append(cmd)
+    # cmd = f"X {pin_name} {pin_number} {X} {Y} {length} {orientation} {sizenum} {sizename} {kicad_schematic.part} {dmg} {electrical_type} {shape}"
+    cmd = [
+        f'      (pin {electrical_type} line (at {mil2mm(X)} {mil2mm(Y)} {orientation}) (length {mil2mm(length)})',
+        f'        (name "{pin_name}" (effects (font (size 1.016 1.016))))',
+        f'        (number "{pin_number}" (effects (font (size 1.016 1.016))))',
+        '      )'
+    ]
+    kicad_schematic.drawing.append("\n".join(cmd))
 
 
 def h_T(data, kicad_schematic):
@@ -139,6 +165,7 @@ def h_T(data, kicad_schematic):
     B(ottom).
     """
     try:
+        raise
         angle = int(data[3])*10
         X = int((float(data[1]) - kicad_schematic.c_x)*kicad_schematic.scale)
         Y = int((float(data[2]) - kicad_schematic.c_y)*kicad_schematic.scale)
@@ -155,7 +182,13 @@ def h_T(data, kicad_schematic):
         Halign = "C"
         Valign = "C"
 
-        cmd= f"T {angle} {X} {Y} {size} {hidden} {part} {dmg} {text} {italic} {bold} {Halign} {Valign}"
+        # cmd= f"T {angle} {X} {Y} {size} {hidden} {part} {dmg} {text} {italic} {bold} {Halign} {Valign}"
+        cmd = [
+            f'      (circle (center {mil2mm(X1)} {mil2mm(Y1)}) (radius {mil2mm(radius)})',
+            '        (stroke (width 0) (type default) (color 0 0 0 0))',
+            '        (fill (type none))',
+            '      )'
+        ]
         kicad_schematic.drawing.append(cmd)
     except:
         logger.exception("Schematic: failed to add text to schematic")
@@ -178,10 +211,21 @@ def h_PL(data, kicad_schematic):
         for px, py in zip(*[iter(ori_points)] * 2):
             x = int((float(px) - kicad_schematic.c_x) * kicad_schematic.scale)
             y = -int((float(py) - kicad_schematic.c_y) * kicad_schematic.scale)
-            points.append(str(x))
-            points.append(str(y))
-        cmd = f"P {count} {kicad_schematic.part} {dmg} {pen} {' '.join(points)}"
-        kicad_schematic.drawing.append(cmd)
+            # points.append(str(mil2mm(x)))
+            # points.append(str(mil2mm(y)))
+            points.append(f"          (xy {mil2mm(x)} {mil2mm(y)})")
+
+        cmd = [
+            "      (polyline",
+            "        (pts",
+            "\n".join(points),
+            "        )",
+            "(stroke (width 0) (type default) (color 0 0 0 0))",
+            "(fill (type none))",
+            "      )"
+        ]
+        # cmd = f"P {count} {kicad_schematic.part} {dmg} {pen} {' '.join(points)}"
+        kicad_schematic.drawing.append("\n".join(cmd))
     except:
         logger.exception("Schematic: failed to add a polygone")
 
@@ -202,11 +246,20 @@ def h_PG(data, kicad_schematic):
         for px, py in zip(*[iter(ori_points)] * 2):
             x = int((float(px) - kicad_schematic.c_x) * kicad_schematic.scale)
             y = -int((float(py) - kicad_schematic.c_y) * kicad_schematic.scale)
-            points.append(str(x))
-            points.append(str(y))
+            points.append(f"          (xy {mil2mm(x)} {mil2mm(y)})")
 
-        cmd = f"P {count + 1} {kicad_schematic.part} {dmg} {pen} {' '.join(points)} {fill}"
-        kicad_schematic.drawing.append(cmd)
+        cmd = [
+            "      (polyline",
+            "        (pts",
+            "\n".join(points),
+            "        )",
+            "(stroke (width 0) (type default) (color 0 0 0 0))",
+            "(fill (type none))",
+            "      )"
+        ]
+
+        # cmd = f"P {count + 1} {kicad_schematic.part} {dmg} {pen} {' '.join(points)} {fill}"
+        kicad_schematic.drawing.append("\n".join(cmd))
     except:
         logger.exception("Schematic: failed to add a polygone")
 
@@ -241,11 +294,22 @@ def h_PT(data, kicad_schematic):
 
                 x = int((float(px) - kicad_schematic.c_x) * kicad_schematic.scale)
                 y = -int((float(py) - kicad_schematic.c_y) * kicad_schematic.scale)
-                points.append(str(x))
-                points.append(str(y))
+                # points.append(str(x))
+                # points.append(str(y))
+                points.append(f"          (xy {mil2mm(x)} {mil2mm(y)})")
 
-        cmd = f"P {count} {kicad_schematic.part} {dmg} {pen} {' '.join(points)}"
-        kicad_schematic.drawing.append(cmd)
+        cmd = [
+            "      (polyline",
+            "        (pts",
+            "\n".join(points),
+            "        )",
+            "(stroke (width 0) (type default) (color 0 0 0 0))",
+            "(fill (type none))",
+            "      )"
+        ]
+
+        # cmd = f"P {count} {kicad_schematic.part} {dmg} {pen} {' '.join(points)}"
+        kicad_schematic.drawing.append("\n".join(cmd))
     except:
         logger.exception("Schematic: failed to add a Path element")
 

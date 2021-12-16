@@ -8,6 +8,7 @@ import requests
 
 from KicadModTree import Model
 from logging import Handler, Formatter
+from pathlib import Path
 
 
 logger = logging.getLogger("KICONV")
@@ -524,8 +525,7 @@ class LibManagerControl:
         )
 
     def check_lib_path(self):
-        self.lib_name = self.frame.txt_lib_name.GetValue()
-        self.lib_root = self.frame.lib_path_picker.GetPath()
+        lib_name = self.frame.txt_lib_name.GetValue()
 
         if self.lib_name == "":
             wx.MessageBox(
@@ -533,6 +533,11 @@ class LibManagerControl:
             )
             return
 
+        if lib_name != self.lib_name and lib_name != 'lcsc':
+            self.save_lib_name(lib_name)
+        self.lib_name = lib_name
+
+        self.lib_root = self.frame.lib_path_picker.GetPath()
         if self.lib_root == "":
             wx.MessageBox(
                 "Library path is empty", 'Error', wx.OK | wx.ICON_ERROR
@@ -592,6 +597,19 @@ class LibManagerControl:
             self.lib_root = new_path
             self.footprint_manager = None
             self.schematic_manager = None
+            self.load_lib_name()
+
+    def save_lib_name(self, name):
+        lib_name_path = Path(self.lib_root).joinpath(".KLPM.conf")   # type: ignore
+        lib_name_path.write_text(name)
+
+    def load_lib_name(self):
+        lib_name_path = Path(self.lib_root).joinpath(".KLPM.conf")   # type: ignore
+        if lib_name_path.is_file():
+            ctx = lib_name_path.read_text().strip()
+
+            if ctx:
+                self.frame.txt_lib_name.SetValue(ctx)
 
     def log_handler(self, msg):
         if not self.frame:

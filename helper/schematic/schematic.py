@@ -12,6 +12,11 @@ from .schematic_handlers import SCHEMATIC_HANDLER
 logger = logging.getLogger("KICONV")
 
 
+def mil2mm(x):
+    x = round(int(x) * 0.0254, 4)
+    return x
+
+
 @dataclass
 class KICADSchematic:
 
@@ -79,20 +84,35 @@ def create_schematic(
     draw_cmds = "\n".join(kicad_schematic.drawing)
 
     component_describe = [
-        f"#\n# {schematic_title}\n#",
-        f"DEF {schematic_title} {symmbolic_prefix} 0 40 Y Y {kicad_schematic.part} F N",
-        f'F0 "{symmbolic_prefix}" {refname_x} {refname_y} 50 H V C CNN',
-        f'F1 "{schematic_title}" {compname_x} {compname_y} 50 H V L CNN',
-        f'F2 "{footprint_name}" {footprint_x} {footprint_y} 50 H I L CNN',
-        f'F3 "{datasheet_link}" {footprint_x} {footprint_y + 100} 50 H I L C N N',
-        f'F4 "{lcid}" {footprint_x} {footprint_y + 200} 50 H I L CNN "LC#"',
-        f'F5 "{desc}" {footprint_x} {footprint_y + 300} 50 H I L CNN "Description"',
-        f'F6 "{category}" {footprint_x} {footprint_y + 400} 50 H I L CNN "Category"',
-        f'F7 "{manufacturer}" {footprint_x} {footprint_y + 500} 50 H I L CNN "manufacturer"',
-        'DRAW',
+        f"  (symbol \"{schematic_title}\" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)",
+        f"    (property \"Reference\" \"{symmbolic_prefix}\" (id 0) (at {mil2mm(refname_x)} {mil2mm(refname_y)} 0)",
+        "      (effects (font (size 1.27 1.27)))",
+        "    )",
+        f"    (property \"Value\" \"{schematic_title}\" (id 1) (at {mil2mm(compname_x)} {mil2mm(compname_y)}  0)",
+        "      (effects (font (size 1.27 1.27)) (justify left))",
+        "    )",
+        f"    (property \"Footprint\" \"{footprint_name}\" (id 2) (at {mil2mm(footprint_x)} {mil2mm(footprint_y)} 0)",
+        "      (effects (font (size 1.27 1.27)) (justify left) hide)",
+        "    )",
+        f"    (property \"Datasheet\" \"{datasheet_link}\" (id 3) (at {mil2mm(footprint_x)} {mil2mm(footprint_y + 100)} 0)",
+        "      (effects (font (size 1.27 1.27)) (justify left) hide)",
+        "    )",
+        f"    (property \"LC#\" \"{lcid}\" (id 4) (at {mil2mm(footprint_x)} {mil2mm(footprint_y + 200)} 0)",
+        "      (effects (font (size 1.27 1.27)) (justify left) hide)",
+        "    )",
+        f"    (property \"Description\" \"{desc}\" (id 5) (at {mil2mm(footprint_x)} {mil2mm(footprint_y + 300)} 0)",
+        "      (effects (font (size 1.27 1.27)) (justify left) hide)",
+        "    )",
+        f"    (property \"Category\" \"{category}\" (id 6) (at {mil2mm(footprint_x)} {mil2mm(footprint_y + 400)} 0)",
+        "      (effects (font (size 1.27 1.27)) (justify left) hide)",
+        "    )",
+        f"    (property \"manufacturer\" \"{manufacturer}\" (id 7) (at {mil2mm(footprint_x)} {mil2mm(footprint_y + 500)} 0)",
+        "      (effects (font (size 1.27 1.27)) (justify left) hide)",
+        "    )",
+        f'    (symbol "{schematic_title}_1_0"',
         draw_cmds,
-        'ENDDRAW',
-        'ENDDEF'
+        "    )",
+        "  )"
     ]
 
     logger.info("Schematic: Schematic Generated.")
