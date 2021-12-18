@@ -17,6 +17,7 @@ from cairosvg.parser import Tree as svgTree
 from cairosvg.surface import SVGSurface, PNGSurface
 
 from gui_lib_manager import LibManagerControl
+from gui_adv_search import AdvSearchControl
 
 
 logger = logging.getLogger(__name__)
@@ -349,6 +350,13 @@ class Main(wx.Frame):
         self.btn_save_to_kicad.Bind(wx.EVT_BUTTON, self.on_btn_save_kicad_pressed)
         sizer_2.Add(self.btn_save_to_kicad, 0, 0, 0)
 
+        sizer_2.Add((20, 20), 0, 0, 0)
+
+        self.btn_adv_search = wx.Button(self.panel_1, wx.ID_ANY, "Adv Search")
+        self.btn_adv_search.SetMinSize((84, 22))
+        self.btn_adv_search.Bind(wx.EVT_BUTTON, self.btn_adv_search_pressed)
+        sizer_2.Add(self.btn_adv_search, 0, 0, 0)
+
         # part root
         product_root_sizer = wx.BoxSizer(wx.HORIZONTAL)
         product_root_sizer.AddSpacer(5)
@@ -514,6 +522,7 @@ class Main(wx.Frame):
     def init_values(self):
         self.lcpart = None
         self.lib_manager = None
+        self.advsearch_manager = None
 
         self.log_init()
         self.status.WriteText("Init Done.\nVersion: Alpha.\n")
@@ -631,6 +640,18 @@ class Main(wx.Frame):
         self.btn_ref.Enable()
 
         logger.info(f"Done.")
+
+    def btn_adv_search_pressed(self, e):
+        if self.advsearch_manager is None:
+            self.advsearch_manager = AdvSearchControl(self)
+
+        ret = self.advsearch_manager.show()
+
+        if ret == wx.OK and self.advsearch_manager.lcsc_part:
+            self.ctl_lcid.SetValue(self.advsearch_manager.lcsc_part)
+            logger.info(f"Search....")
+
+            self.on_btn_search_pressed(None)
 
     def on_btn_save_kicad_pressed(self, e):
         if self.lcpart is None:
