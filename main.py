@@ -506,6 +506,21 @@ class Main(wx.Frame):
 
         self.panel_1.SetSizer(sizer_1)
 
+        self.part_eda_id = wx.NewIdRef()
+        self.part_lceda_id = wx.NewIdRef()
+
+        menubar = wx.MenuBar()
+        addMenu = wx.Menu()
+        easyeda_part = addMenu.Append(self.part_eda_id, 'EasyEda Part', 'EasyEda Part')
+        # easyeda_part.Bind(wx.EVT_MENU, lambda x: self.add_part_by_uuid(True))
+        lceda_part = addMenu.Append(self.part_lceda_id, 'LcEDA Part', 'LcEDA Part')
+        # lceda_part.Bind(wx.EVT_MENU, lambda x: self.add_part_by_uuid(False))
+
+        addMenu.Bind(wx.EVT_MENU, self.add_part_by_uuid)
+        menubar.Append(addMenu, 'Add Part')
+
+        self.SetMenuBar(menubar)
+
         self.Layout()
         self.init_values()
 
@@ -527,6 +542,37 @@ class Main(wx.Frame):
         self.log_init()
         self.status.WriteText("Init Done.\nVersion: Alpha.\n")
         logger.debug('DEBUG MODE: ON')
+
+    def add_part_by_uuid(self, e):
+        # print(e.GetId(), self.part_eda_id)
+        source = "EasyEda"
+        source_easyeda = True
+        if e.GetId() == self.part_lceda_id.GetId():
+            source = 'LcEda'
+            source_easyeda = False
+
+        dlg = wx.TextEntryDialog(
+            self, f'Please entry {source} part UUID.'
+        )
+        ret = dlg.ShowModal()
+        if ret != wx.ID_OK:
+            return
+
+        value = dlg.GetValue().strip()
+        dlg.Destroy()
+
+        if value == "":
+            warn_dialog('Part UUID Cannot be empty.')
+            return
+
+        if self.lib_manager is None:
+            self.lib_manager = LibManagerControl(self)
+
+        self.lib_manager.load_part(
+            value,
+            direct_part=True,
+            source_easyeda=source_easyeda
+        )
 
     def make_part_attr_pairs(self, panel, name, label, **kwargs):
         sizer = wx.BoxSizer(wx.HORIZONTAL)

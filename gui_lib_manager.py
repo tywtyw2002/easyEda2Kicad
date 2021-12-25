@@ -43,7 +43,7 @@ class LCComponent:
             logger.warning("3DModel Name not avaliable.")
             return ""
 
-        return self.footprint['dataStr']['head']['c_para']['3DModel']
+        return self.footprint['dataStr']['head']['c_para'].get('3DModel', "")
 
     @property
     def footprint_name(self):
@@ -51,6 +51,7 @@ class LCComponent:
             logger.warning("Footprint Name not avaliable.")
             return ""
 
+        # title = self.raw_data.get('title', self.lcid)
         return self.footprint['title']
 
     @property
@@ -174,6 +175,46 @@ class LCComponent:
             category=category,
             manufacturer=manufacturer
         )
+
+
+class LCUUIDComponent(LCComponent):
+    def __init__(self, part_uuid, source_easyeda=True):
+        self.lcid = part_uuid
+        self.lc_data = None
+        self.raw_data = None
+        self.footprint = None
+        self.symbol = None
+        self.source_easyeda = source_easyeda
+
+    def load_componnt(self):
+        logger.info("Load Component -> %s", self.lcid)
+
+        url = f"https://easyeda.com/api/components/{self.lcid}"
+
+        if not self.source_easyeda:
+            url = f"https://lceda.cn/api/components/{self.lcid}"
+
+        req = requests.get(url)
+
+        data = req.json()
+
+        if data['code'] != 0:
+            logger.critical(
+                "Unable to load component %s. Code: %s",
+                self.lcid,
+                data['message']
+            )
+            return False
+
+        self.raw_data = data['result']
+
+        if self.raw_data['docType'] == 2:
+            self.symbol = self.raw_data['dataStr']
+            self.footprint = self.raw_data['packageDetail']
+        elif self.raw_data['docType'] == 4:
+            self.footprint = self.raw_data
+
+        return True
 
 
 class LibManagerFrame(wx.Dialog):
@@ -617,8 +658,12 @@ class LibManagerControl:
 
         self.frame.txt_ctl_log.AppendText(msg)
 
-    def load_part(self, lcid, lc_data=None):
-        self.component = LCComponent(lcid, lc_data)
+    def load_part(self, lcid, lc_data=None, direct_part=False, source_easyeda=True):
+        if direct_part:
+            self.component = LCUUIDComponent(lcid, source_easyeda)
+        else:
+            self.component = LCComponent(lcid, lc_data)
+
         self.frame = LibManagerFrame(self.wx_parent, wx.ID_ANY, "")
 
         # Init Binds
