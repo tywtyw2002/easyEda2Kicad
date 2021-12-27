@@ -13,8 +13,9 @@ class FootprintExist(Exception):
 
 class FootprintManager:
 
-    def __init__(self, root_path, lib_name='lcsc'):
+    def __init__(self, root_path, lib_name='lcsc', lib_prefix='libs'):
         self.lib_name = lib_name
+        self.lib_prefix = lib_prefix
         self.lib_path = Path(root_path).joinpath(f"{lib_name}.pretty")
         self.lib_3d_path = Path(root_path).joinpath(f"{lib_name}.3dshapes")
 
@@ -53,4 +54,4 @@ class FootprintManager:
         return model_path.exists()
 
     def get_3d_model_ref_path(self, name):
-        return f"${{KIPRJMOD}}/{self.lib_name}.3dshapes/{name}"
+        return f"${{KIPRJMOD}}/{self.lib_prefix}/{self.lib_name}.3dshapes/{name}.wrl"
