@@ -21,6 +21,7 @@ layer_correspondance = {
     "6": "B.Paste",
     "7": "F.Mask",
     "8": "B.Mask",
+    "10": "Margin",
     "12": "F.Fab",
     "100": "F.SilkS",
     "101": "F.Courtyard",
