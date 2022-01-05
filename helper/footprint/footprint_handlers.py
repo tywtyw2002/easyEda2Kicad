@@ -21,7 +21,7 @@ layer_correspondance = {
     "6": "B.Paste",
     "7": "F.Mask",
     "8": "B.Mask",
-    "10": "Margin",
+    "10": "Edge.Cuts",
     "12": "F.Fab",
     "100": "F.SilkS",
     "101": "F.Courtyard",
@@ -102,6 +102,9 @@ def h_PAD(data, kicad_mod, footprint_info):
         pad_type = Pad.TYPE_THT
         pad_layer = Pad.LAYERS_THT
         pad_drill = pmil2mm(hole_size * 2)
+        pad_drill_h = pmil2mm(float(data[11]))
+        if pad_drill_h > 0:
+            pad_drill = (pad_drill_h, pad_drill)
 
     pad_position = mil2mm(data[1], data[2], footprint_info)
     pad_size = smil2mm(data[3], data[4])
@@ -206,6 +209,33 @@ def h_CIRCLE(data, kicad_mod, footprint_info):
     )
 
 
+def h_RECT(data, kicad_mod, footprint_info):
+    # append a Circle to the footprint
+
+    # they want to draw a circle on pads, we don't want that.
+    # This is an empirical deduction, no idea if this is correct,
+    # but it seems to work on my tests
+
+    start = mil2mm(data[0], data[1], footprint_info)
+    width = pmil2mm(data[2])
+    height = pmil2mm(data[3])
+
+    try:
+        layer = layer_correspondance[data[4]]
+    except KeyError:
+        logger.exception('Footprint(Circle): footprint layer correspondance not found')
+        layer = "F.SilkS"
+
+    kicad_mod.append(
+        RectLine(
+            start=start,
+            end=[start[0] + width, start[1] + height],
+            # width=0.2,
+            layer=layer
+        )
+    )
+
+
 def h_SOLIDREGION(data, kicad_mod, footprint_info):
     pass
 
@@ -235,5 +265,6 @@ FOOTPRINT_HANDLER = {
     "CIRCLE": h_CIRCLE,
     "SOLIDREGION": h_SOLIDREGION,
     "SVGNODE": h_SVGNODE,
+    "RECT": h_RECT,
     "VIA": h_VIA,
 }
