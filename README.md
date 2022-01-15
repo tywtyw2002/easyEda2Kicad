@@ -1,5 +1,7 @@
 # easyEda2Kicad
 
+Import EasyEda footprint to Kicad.
+
 ## Python Lib Requirements
 - `KicadModTree`
 - `wxPython` > `4.1`
