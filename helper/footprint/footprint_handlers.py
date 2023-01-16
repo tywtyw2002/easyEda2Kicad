@@ -258,7 +258,6 @@ def h_SVGNODE(data, kicad_mod, footprint_info):
 
 def h_HOLE(data, kicad_mod, footprint_info):
     hole_size = pmil2mm(float(data[2]) * 2)     # R -> Dia
-    print(data, hole_size)
     kicad_mod.append(
         Pad(
             type=Pad.TYPE_NPTH,

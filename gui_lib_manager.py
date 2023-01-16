@@ -534,7 +534,7 @@ class LibManagerControl:
         # 3d model
         if not model3d_enabled:
             logger.info("Skip 3D Model Generate.")
-            return
+            # return
 
         model3d_data = footprint_data.c_3d_model    # type: ignore
         t = self.footprint_manager.check_3d_model(model3d_name)
