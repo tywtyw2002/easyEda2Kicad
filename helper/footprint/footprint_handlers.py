@@ -98,13 +98,17 @@ def h_PAD(data, kicad_mod, footprint_info):
 
     hole_size = float(data[7])
 
+    # back layer
+    if data[5] == "2":
+        pad_layer = ['B.Cu', 'B.Mask']
+
     if hole_size > 0:
         pad_type = Pad.TYPE_THT
         pad_layer = Pad.LAYERS_THT
         pad_drill = pmil2mm(hole_size * 2)
-        pad_drill_h = pmil2mm(float(data[11]))
-        if pad_drill_h > 0:
-            pad_drill = (pad_drill_h, pad_drill)
+        # pad_drill_h = pmil2mm(float(data[11]))
+        # if pad_drill_h > 0:
+        #     pad_drill = (pad_drill_h, pad_drill)
 
     pad_position = mil2mm(data[1], data[2], footprint_info)
     pad_size = smil2mm(data[3], data[4])
@@ -252,6 +256,21 @@ def h_SVGNODE(data, kicad_mod, footprint_info):
     return model_data
 
 
+def h_HOLE(data, kicad_mod, footprint_info):
+    hole_size = pmil2mm(float(data[2]) * 2)     # R -> Dia
+    print(data, hole_size)
+    kicad_mod.append(
+        Pad(
+            type=Pad.TYPE_NPTH,
+            shape=Pad.SHAPE_CIRCLE,
+            layers=Pad.LAYERS_NPTH,
+            at=mil2mm(data[0], data[1], footprint_info),
+            size=(hole_size, hole_size),
+            drill=hole_size,
+        )
+    )
+
+
 def h_VIA(data, kicad_mod, footprint_info):
     logger.warning("Footprint: VIA not supported.")
     logger.info("      Via are often added for better heat dissipation.")
@@ -267,4 +286,5 @@ FOOTPRINT_HANDLER = {
     "SVGNODE": h_SVGNODE,
     "RECT": h_RECT,
     "VIA": h_VIA,
+    "HOLE": h_HOLE,
 }

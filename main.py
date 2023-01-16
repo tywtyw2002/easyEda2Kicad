@@ -253,11 +253,12 @@ class LCPART:
 
     def get_part_detail_from_easyeda(self):
         logger.info("Fetching Part Info.")
-        req = requests.get(f'https://wwwapi.lcsc.com/v1/products/detail?product_code={self.lcid}')
+        # req = requests.get(f'https://wwwapi.lcsc.com/v1/products/detail?product_code={self.lcid}')
+        req = requests.get(f'https://wmsc.lcsc.com/wmsc/product/detail?productCode={self.lcid}')
         data = req.json()
 
         if isinstance(data, dict):
-            self.part_detail = data
+            self.part_detail = data['result']
 
         self.part_loaded = True
 

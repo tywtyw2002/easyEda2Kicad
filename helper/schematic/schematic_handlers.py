@@ -1,5 +1,5 @@
 import logging
-from svg.path import parse_path, Move, Line, Close
+from svg.path import parse_path, Move, Line, Close, CubicBezier, Arc
 
 logger = logging.getLogger("KICONV")
 
@@ -274,6 +274,7 @@ def h_PT(data, kicad_schematic):
         dmg = 0
         pen = 0
         points = []
+        pt_type = "polyline"
         for element in path:
             if isinstance(element, Move):
                 continue
@@ -282,6 +283,61 @@ def h_PT(data, kicad_schematic):
             if isinstance(element, Line):
                 process_points.append(element.start)
             elif isinstance(element, Close):
+                process_points.append(element.start)
+                process_points.append(element.end)
+            elif isinstance(element, CubicBezier):
+                pt_type = "bezier"
+                process_points.append(element.start)
+                process_points.append(element.control1)
+                process_points.append(element.control2)
+                process_points.append(element.end)
+            else:
+                logger.warning("Schematic: unknown type of element. %s", element)
+
+            for point in process_points:
+                count += 1
+                px = point.real
+                py = point.imag
+
+                x = int((float(px) - kicad_schematic.c_x) * kicad_schematic.scale)
+                y = -int((float(py) - kicad_schematic.c_y) * kicad_schematic.scale)
+                # points.append(str(x))
+                # points.append(str(y))
+                points.append(f"          (xy {mil2mm(x)} {mil2mm(y)})")
+
+        cmd = [
+            f"      ({pt_type}",
+            "        (pts",
+            "\n".join(points),
+            "        )",
+            "(stroke (width 0) (type default) (color 0 0 0 0))",
+            "(fill (type none))",
+            "      )"
+        ]
+
+        # cmd = f"P {count} {kicad_schematic.part} {dmg} {pen} {' '.join(points)}"
+        kicad_schematic.drawing.append("\n".join(cmd))
+    except:
+        logger.exception("Schematic: failed to add a Path element")
+
+
+def h_A(data, kicad_schematic):
+    """
+    Arc element handler
+    """
+    try:
+        path = parse_path(data[0])
+        count = 0
+        dmg = 0
+        pen = 0
+        points = []
+        for element in path:
+            if isinstance(element, Move):
+                continue
+
+            process_points = []
+            if isinstance(element, Arc):
+                process_points.append(element.start)
                 process_points.append(element.start)
                 process_points.append(element.end)
             else:
@@ -299,7 +355,7 @@ def h_PT(data, kicad_schematic):
                 points.append(f"          (xy {mil2mm(x)} {mil2mm(y)})")
 
         cmd = [
-            "      (polyline",
+            "      (arc",
             "        (pts",
             "\n".join(points),
             "        )",
@@ -311,7 +367,7 @@ def h_PT(data, kicad_schematic):
         # cmd = f"P {count} {kicad_schematic.part} {dmg} {pen} {' '.join(points)}"
         kicad_schematic.drawing.append("\n".join(cmd))
     except:
-        logger.exception("Schematic: failed to add a Path element")
+        logger.exception("Schematic: failed to add a Arc element")
 
 
 SCHEMATIC_HANDLER = {
@@ -322,4 +378,5 @@ SCHEMATIC_HANDLER = {
     "PL": h_PL,
     "PG": h_PG,
     "PT": h_PT,
+    # "A": h_A
 }
