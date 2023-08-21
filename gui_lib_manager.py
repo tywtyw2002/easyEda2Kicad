@@ -141,7 +141,7 @@ class LCComponent:
 
         box = self.symbol['BBox']
         symmbolic_prefix = self.symbol['head']['c_para']['pre']
-        manufacturer = self.symbol['head']['c_para']['BOM_Manufacturer']
+        manufacturer = self.symbol['head']['c_para']['Manufacturer']
         datasheet_link = self.get_datasheet()
         category = " - "
         desc = self.raw_data['description']     # type: ignore

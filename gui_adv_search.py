@@ -114,9 +114,9 @@ class AdvSearchControl:
         for record in results:
             c_para = record['dataStr']['head']['c_para']
             data = [
-                c_para['BOM_Supplier Part'],
+                c_para['Supplier Part'],
                 c_para['name'],
-                c_para.get('BOM_Manufacturer', ""),
+                c_para.get('Manufacturer', ""),
                 record.get('SMT', False),
                 c_para['package'],
                 record['description'] or record.get('tags', [""])[0]
